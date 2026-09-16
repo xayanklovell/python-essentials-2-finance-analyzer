@@ -21,7 +21,7 @@ PENDING_MESSAGES = {
     5: "Not implemented yet: detect duplicate transactions in analytics.py.",
     6: "Not implemented yet: flag unusual transactions in analytics.py.",
     7: "Not implemented yet: write the monthly summary in reporting.py.",
-    8: "No tests added yet. Write assertions in tests.py, then connect this option.",
+    8: "Model tests are available: run python tests.py. This menu connection is still pending.",
 }
 
 
