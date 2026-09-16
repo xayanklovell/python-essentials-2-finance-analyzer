@@ -4,7 +4,10 @@ Python Essentials 2 advanced challenge by Xayan Kyle Lovell.
 
 ## Current progress
 
-The project skeleton is in place. The menu, transaction classes, parser,
+The project skeleton and nine-option menu are in place. The menu handles
+invalid input and exits with option 9, Ctrl+C, or end of input.
+
+Options 1–8 explain which work is pending. Transaction classes, parsing,
 analytics, reports, and assertion tests will be built step by step.
 
 ## Run locally
@@ -12,12 +15,15 @@ analytics, reports, and assertion tests will be built step by step.
 Use Python 3.10 or newer. No external packages are required.
 
 ```bash
+git clone https://github.com/xayanklovell/python-essentials-2-finance-analyzer.git
+cd python-essentials-2-finance-analyzer
 python main.py
 python tests.py
 ```
 
 Use `python3` if that is the Python command on your computer. At this stage,
-`main.py` prints a setup message and `tests.py` states that tests are pending.
+`main.py` opens the menu and `tests.py` states that tests are pending.
+The pending-tests message does not mean the project has passed a test suite.
 
 ## Project structure
 
