@@ -1,6 +1,8 @@
 """Main menu for the Personal Finance Transaction Analyzer."""
 
-from parser import generate_sample_file
+from pathlib import Path
+
+from parser import STATEMENT_FILE, generate_sample_file, load_transactions
 
 
 MENU = """===== FINANCE TRANSACTION ANALYZER =====
@@ -16,7 +18,6 @@ MENU = """===== FINANCE TRANSACTION ANALYZER =====
 
 # Replace these messages with function calls as each module is implemented.
 PENDING_MESSAGES = {
-    2: "Not implemented yet: load and validate transactions in parser.py.",
     3: "Not implemented yet: build the running-balance generator in analytics.py.",
     4: "Not implemented yet: calculate category totals in analytics.py.",
     5: "Not implemented yet: detect duplicate transactions in analytics.py.",
@@ -28,6 +29,8 @@ PENDING_MESSAGES = {
 
 def main():
     """Keep showing the menu until the user exits."""
+    transactions = []
+    rejections = []
     while True:
         print(f"\n{MENU}")
         try:
@@ -47,15 +50,31 @@ def main():
             print("Goodbye!")
             break
 
-        if choice == 1:
-            try:
+        try:
+            if choice == 1:
                 path = generate_sample_file()
+                transactions, rejections = [], []
                 print(f"Generated fictional sample statement: {path}")
                 print("This replaces the previous sample statement.")
-            except (OSError, UnicodeError) as error:
-                print(f"Could not write the sample statement: {error}")
-        else:
-            print(PENDING_MESSAGES[choice])
+                print("Choose option 2 to load it.")
+            elif choice == 2:
+                answer = input(f"Statement path [Enter for {STATEMENT_FILE}]: ").strip()
+                path = Path(answer).expanduser() if answer else STATEMENT_FILE
+                transactions, rejections = load_transactions(path)
+                rejected_rows = sum(reason.startswith("row ") for reason in rejections)
+                print(f"Loaded {len(transactions)} transactions; rejected {rejected_rows} rows.")
+                for reason in rejections:
+                    print(f"  {reason}")
+                print("Duplicates and sign/category mismatches are kept for later analysis.")
+            else:
+                print(PENDING_MESSAGES[choice])
+        except (OSError, UnicodeError) as error:
+            print(f"Could not complete the file operation: {error}")
+        except (ValueError, RuntimeError) as error:
+            print(f"Could not use that statement path: {error}")
+        except (EOFError, KeyboardInterrupt):
+            print("\nGoodbye!")
+            break
 
 
 if __name__ == "__main__":

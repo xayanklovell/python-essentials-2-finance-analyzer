@@ -1,15 +1,14 @@
-"""Assertion tests for transaction models and sample-statement generation."""
+"""Assertion tests for transaction models, sample generation, and defensive loading."""
 
 from collections import Counter
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from models import RecurringTransaction, Transaction
-from parser import generate_sample_file
+from parser import generate_sample_file, load_transactions, parse_row
 
-# TODO: Test parsing, invalid rows, missing files, and date normalisation.
 # TODO: Test the ledger, closure, duplicates, and outliers.
-# TODO: Use helpful assertion messages and temporary files for file tests.
+# TODO: Test reports when reporting.py is implemented.
 
 if __name__ == "__main__":
     if not __debug__:
@@ -110,5 +109,91 @@ if __name__ == "__main__":
         sample_path.write_text("Old sample to replace", encoding="utf-8")
         generate_sample_file(sample_path)
         assert sample_path.read_text(encoding="utf-8") == sample, "Regeneration must replace the old sample rather than append"
+        loaded_sample, sample_rejections = load_transactions(sample_path)
+        assert len(loaded_sample) == 17, "The supplied sample should retain all 17 valid rows"
+        assert len(sample_rejections) == 7, "The supplied sample should reject its seven broken rows"
 
-    print("All tests passed (transaction models and sample generation).")
+    # Parser contracts: normalise fields, preserve meaning, and reject bad rows.
+    parser_start_count = Transaction.total_transactions
+    parsed = parse_row('2024/02/29,"  Market, \"\"Corner\"\"  ",-12.50, food ')
+    assert parsed.date == "2024-02-29", "Valid leap dates must normalise to ISO"
+    assert parsed.description == 'Market, "Corner"', "CSV quotes and commas must survive"
+    assert parsed.amount == -12.5 and isinstance(parsed.amount, float), "Keep signed float amounts"
+    assert parsed.category == "FOOD", "Normalise category case and whitespace"
+    parsed_snapshot = (parsed.date, parsed.description, parsed.amount, parsed.category)
+    bad_rows = [
+        "", "   ",
+        "2026-02-29,Lunch,-20,FOOD",         # Not a leap year.
+        "2026-04-31,Lunch,-20,FOOD",         # Invalid day in this month.
+        "2026/08-01,Lunch,-20,FOOD",         # Mixed separators.
+        "2026-08-01,Lunch,-20",             # Missing category.
+        "2026-08-01,Lunch,-20,FOOD,extra",   # Extra field.
+        ",Lunch,-20,FOOD",
+        "2026-08-01, , -20,FOOD",
+        "2026-08-01,Lunch, ,FOOD",
+        "2026-08-01,Lunch,-20, ",
+        "2026-08-01,Lunch,banana,FOOD",
+        "2026-08-01,Lunch,NaN,FOOD",
+        "2026-08-01,Lunch,inf,FOOD",
+        "2026-08-01,Lunch,-inf,FOOD",
+        "2026-08-01,Lunch,1e999,FOOD",
+        "2026-08-01,Lu\x00nch,-20,FOOD",
+        "2026-08-01,Lu\x1bnch,-20,FOOD",
+        "2026-08-01,Lu\tnch,-20,FOOD",
+        "2026-08-01,Lunch,-20,FO\tOD",
+        '2026-08-01,"Unclosed,-20,FOOD',
+    ]
+    for bad_row in bad_rows:
+        try:
+            parse_row(bad_row)
+        except ValueError as error:
+            assert str(error), "Rejected rows must explain what failed"
+        else:
+            raise AssertionError(f"Invalid row was accepted: {bad_row!r}")
+    assert Transaction.total_transactions == parser_start_count + 1, "Rejected rows must not count"
+
+    with TemporaryDirectory() as temporary_directory:
+        fixture_path = Path(temporary_directory) / "mixed.csv"
+        valid_rows = [
+            "2026/08/01,Salary,1500,income",
+            '2026-08-02,"Groceries, weekly",-50,food',
+            "2026-08-03,Refund,20,FOOD",       # Keep positive non-INCOME.
+            "2026-08-04,Reversal,-10,INCOME",  # Keep negative INCOME.
+            "2026-08-05,Gift,0,custom",        # Unknown categories are allowed.
+            '2026-08-02,"Groceries, weekly",-50,food',  # Retain duplicates.
+        ]
+        records = ["", "DaTe,Description,AMOUNT,Category"] + bad_rows + valid_rows
+        binary_records = [record.encode("utf-8") for record in records]
+        binary_records += [b"2026-08-06,Bad byte \xff,-1,FOOD", b"2026-08-07,Recovery,-2,OTHER"]
+        fixture_path.write_bytes(b"\xef\xbb\xbf" + b"\n".join(binary_records) + b"\n")
+        before_load = Transaction.total_transactions
+        valid, reasons = load_transactions(fixture_path)
+        assert len(valid) == 7, "Keep valid rows, including duplicates and sign mismatches"
+        expected_rows = [1] + list(range(3, 3 + len(bad_rows))) + [len(records) + 1]
+        assert len(reasons) == len(expected_rows), "Return exactly one reason per rejected row"
+        for reason, row_number in zip(reasons, expected_rows):
+            assert reason.startswith(f"row {row_number}: "), "Keep physical source row numbers"
+        assert Transaction.total_transactions == before_load + 7, "Only loaded valid rows count"
+        assert valid[0].date == "2026-08-01", "Accept BOM, leading blank, and case-insensitive header"
+        assert valid[2].category == "FOOD" and valid[2].amount == 20, "Retain positive expense-category rows"
+        assert valid[3].category == "INCOME" and valid[3].amount == -10, "Retain negative INCOME rows"
+        assert valid[4].category == "CUSTOM" and valid[4].amount == 0, "Allow unknown categories and zero"
+        assert valid[1].formatted() == valid[5].formatted(), "Retain duplicate records unchanged"
+        assert valid[-1].description == "Recovery", "Resume after malformed CSV and invalid UTF-8"
+        assert (parsed.date, parsed.description, parsed.amount, parsed.category) == parsed_snapshot, "Loading must not mutate earlier objects"
+
+        fixture_path.write_text("2026-08-08,Café,-3,FOOD\n", encoding="utf-8")
+        no_header, reasons = load_transactions(fixture_path)
+        assert len(no_header) == 1 and not reasons, "Headers are optional and Unicode text is valid"
+        assert no_header[0].description == "Café", "Preserve valid UTF-8 text"
+        for payload in (b"", b"date,description,amount,category\n"):
+            fixture_path.write_bytes(payload)
+            valid, reasons = load_transactions(fixture_path)
+            assert not valid and len(reasons) == 1, "Empty and header-only files need one diagnostic"
+            assert reasons[0].startswith("file: "), "No-data errors must identify the file"
+        for unusable_path in (Path(temporary_directory) / "missing.csv", Path(temporary_directory)):
+            valid, reasons = load_transactions(unusable_path)
+            assert not valid and len(reasons) == 1, "Missing paths and directories must not crash"
+            assert reasons[0].startswith("file: "), "Path errors must identify the file"
+
+    print("All tests passed (transaction models, sample generation, and defensive loading).")

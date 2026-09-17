@@ -25,9 +25,37 @@ Option 1 now creates `data/statement.txt` with 24 fictional rows, including
 duplicates, missing fields, junk, invalid amounts, wrong signs, and whitespace.
 It replaces the previous sample. Generated paths are relative to the project.
 
-Options 2–8 explain which work is pending. Parsing,
-analytics, reports, and other menu connections will be built step by step. Calendar-date
-validation will be implemented with the parser.
+Option 2 loads the sample or a custom statement path. The sample produces
+17 valid transactions and seven row rejections. Each rejection includes its
+physical line number and reason. Missing and empty files produce file diagnostics
+instead of crashing; these do not count as rejected rows.
+
+Options 3–8 explain which work is pending. Analytics, reports, and their menu
+connections will be built step by step. Run tests directly with `python tests.py`.
+
+## Statement format and cleaning
+
+Each UTF-8 line contains four comma-separated fields:
+
+```text
+date,description,amount,category
+2026/08/03, Groceries , -450.50 , food
+2026-08-04,"Lunch, with friends",-180,FOOD
+```
+
+The header is optional on the first nonblank line. The loader strips surrounding
+whitespace, converts categories to uppercase, converts amounts to finite floats,
+and normalises `YYYY/MM/DD` to `YYYY-MM-DD`. Dates must be real calendar dates.
+Quoted commas and doubled quotes are supported; multiline records are rejected.
+
+Blank lines, missing/extra fields, invalid dates or amounts, embedded control
+characters, and invalid UTF-8 rows are rejected independently. A UTF-8 byte-order
+mark at the start is accepted. Later valid rows still load after a broken row.
+Duplicates and sign/category mismatches remain unchanged for later analysis.
+Unknown category names are accepted, and file order is preserved.
+
+Custom relative paths are resolved from the terminal's current directory;
+the default sample path is always inside this project.
 
 ## Run locally
 
@@ -42,7 +70,7 @@ python tests.py
 
 Use `python3` if that is the Python command on your computer. At this stage,
 `main.py` opens the menu and `tests.py` runs the current assertions.
-A passing result covers transaction models and sample generation;
+A passing result covers transaction models, sample generation, and defensive loading;
 the remaining features and their tests are still to be implemented.
 
 ## Project structure
