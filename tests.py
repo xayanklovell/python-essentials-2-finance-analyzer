@@ -4,13 +4,13 @@ from collections import Counter
 from decimal import getcontext
 import inspect
 from pathlib import Path
+import statistics
 from tempfile import TemporaryDirectory
 
-from analytics import category_totals, find_duplicates, make_flagger, running_balance
+from analytics import category_totals, find_duplicates, find_outliers, make_flagger, running_balance
 from models import RecurringTransaction, Transaction
 from parser import generate_sample_file, load_transactions, parse_row
 
-# TODO: Test statistical outliers.
 # TODO: Test reports when reporting.py is implemented.
 
 if __name__ == "__main__":
@@ -322,4 +322,37 @@ if __name__ == "__main__":
     assert find_duplicates(close_amounts) == [], "Compare actual amounts rather than rounded display strings"
     assert len(find_duplicates(loaded_sample)) == 1, "Detect the one extra occurrence planted in the sample"
 
-    print("All tests passed (models, parsing, ledger, flagger, categories, and duplicates).")
+    for values in ([], [100], [-100, 100], [0, 0, 0], [10] * 7):
+        items = [Transaction("2026-08-01", "Small or constant", value, "OTHER") for value in values]
+        assert find_outliers(items) == [], "Small or constant samples must not produce outliers"
+
+    for extreme_amount in (100, -100):
+        amounts = [0] * 6 + [extreme_amount]
+        items = [Transaction("2026-08-01", "Outlier check", value, "OTHER") for value in amounts]
+        average = statistics.mean(amounts)
+        deviation = statistics.stdev(amounts)
+        expected = [item for item in items if abs(item.amount - average) > 2 * deviation]
+        assert expected == [items[-1]], "The fixture should contain one positive or negative outlier"
+        assert find_outliers(iter(items)) == expected, "Outliers must match the signed sample-standard-deviation rule"
+
+    signed_items = [Transaction("2026-08-01", "Signed check", amount, "OTHER") for amount in ([100] * 6 + [-100])]
+    assert find_outliers(signed_items) == [signed_items[-1]], "Use signed amounts, not their magnitudes"
+    boundary_values = [-1, -1, -1, -1, 0, 4]
+    assert statistics.mean(boundary_values) == 0 and statistics.stdev(boundary_values) == 2, "The boundary fixture must be exactly two standard deviations away"
+    boundary_items = [Transaction("2026-08-01", "Exact boundary", amount, "OTHER") for amount in boundary_values]
+    assert find_outliers(boundary_items) == [], "An amount exactly two standard deviations away must be excluded"
+    sample_values = [-1, -1, 0, 0, 0, 3]
+    assert abs(3 - statistics.mean(sample_values)) > 2 * statistics.pstdev(sample_values), "This fixture must distinguish population from sample standard deviation"
+    sample_items = [Transaction("2026-08-01", "Sample rule", amount, "OTHER") for amount in sample_values]
+    assert find_outliers(sample_items) == [], "Use sample stdev, not population pstdev"
+
+    for magnitude in (1e308, 5e-324):
+        values = [-magnitude] + [0] * 10 + [magnitude]
+        items = [Transaction("2026-08-01", "Extreme scale", amount, "OTHER") for amount in values]
+        before_outliers_count = Transaction.total_transactions
+        assert find_outliers(items) == [items[0], items[-1]], "Handle very large and very small finite amounts in original order"
+        assert [item.amount for item in items] == values, "Outlier detection must not change the original amounts"
+        assert Transaction.total_transactions == before_outliers_count, "Outlier detection must not create transactions"
+    assert find_outliers(loaded_sample) == [loaded_sample[0]], "The sample salary should be its sole statistical outlier"
+
+    print("All tests passed (transaction models, defensive parsing, and all analytics).")

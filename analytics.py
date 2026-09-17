@@ -2,6 +2,7 @@
 
 from decimal import Decimal, localcontext
 import math
+import statistics
 
 
 def _finite_number(value, label):
@@ -77,4 +78,23 @@ def find_duplicates(transactions):
     return duplicates
 
 
-# TODO: find_outliers(transactions) uses statistics.mean and statistics.stdev.
+def find_outliers(transactions):
+    """Flag signed amounts more than two sample standard deviations from the mean."""
+    items = list(transactions)
+    if len(items) < 2:
+        return []
+    amounts = [_finite_number(item.amount, "Transaction amount") for item in items]
+    scale = max(abs(amount) for amount in amounts)
+    if scale == 0:
+        return []
+    # A common scale keeps large finite amounts from overflowing the statistics.
+    # It preserves the ratio between distance from the mean and standard deviation.
+    scaled_amounts = [amount / scale for amount in amounts]
+    average = statistics.mean(scaled_amounts)
+    deviation = statistics.stdev(scaled_amounts)
+    if deviation == 0:
+        return []
+    return [
+        item for item, amount in zip(items, scaled_amounts)
+        if abs(amount - average) > 2 * deviation
+    ]

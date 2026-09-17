@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from analytics import category_totals, find_duplicates, make_flagger, running_balance
+from analytics import category_totals, find_duplicates, find_outliers, make_flagger, running_balance
 from parser import STATEMENT_FILE, generate_sample_file, load_transactions
 
 
@@ -108,7 +108,13 @@ def main():
                     print(f"  {transaction.formatted()}")
                 if not flagged:
                     print("No transactions exceed this threshold.")
-                print("Statistical outlier detection is still pending.")
+                outliers = find_outliers(transactions)
+                print(f"\nStatistical outliers (> 2 sample standard deviations): {len(outliers)}")
+                for transaction in outliers:
+                    print(f"  {transaction.formatted()}")
+                if not outliers:
+                    print("No statistical outliers found.")
+                print("Statistics use signed amounts; the magnitude threshold is a separate rule.")
             else:
                 print(PENDING_MESSAGES[choice])
         except (OSError, UnicodeError) as error:

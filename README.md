@@ -50,12 +50,17 @@ The sample contains one extra occurrence of the coffee transaction.
 Option 6 now demonstrates the configurable threshold closure. Enter a finite,
 nonnegative threshold (default 1000); transactions are flagged only when their
 amount magnitude is greater than it. Income and expenses can both be flagged;
-amounts equal to the threshold are excluded. Statistical outlier detection is
-still pending and is a separate rule from this magnitude check.
+amounts equal to the threshold are excluded.
 
-Options 7 and 8 explain which work is pending. Statistical outliers,
-reports, and the remaining menu connections will
-be built step by step. Run tests directly with `python tests.py`.
+Option 6 also shows statistical outliers as a separate result. This rule uses
+signed amounts and flags values more than two sample standard deviations from
+their mean, using `statistics.mean()` and `statistics.stdev()`. Small or constant
+samples may have no outliers. A common scale avoids overflow for large finite
+amounts; transactions remain unchanged. Changing the magnitude threshold does
+not change the statistical result. The sample salary is its sole outlier.
+
+Options 7 and 8 explain which work is pending. Reports, logging, and the remaining
+menu connections will be built next. Run tests directly with `python tests.py`.
 
 ## Statement format and cleaning
 
@@ -95,7 +100,7 @@ python tests.py
 Use `python3` if that is the Python command on your computer. At this stage,
 `main.py` opens the menu and `tests.py` runs the current assertions.
 A passing result covers transaction models, sample generation, defensive loading,
-running balances, threshold flagging, category totals, and duplicate detection;
+running balances, threshold flagging, category totals, duplicates, and outliers;
 the remaining features and their tests are still to be implemented.
 
 ## Project structure
