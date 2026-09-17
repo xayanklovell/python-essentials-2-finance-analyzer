@@ -9,10 +9,13 @@ invalid input and exits with option 9, Ctrl+C, or end of input.
 
 `Transaction.__init__()` now stores the four transaction fields, cleans surrounding
 text whitespace, converts finite amounts to floats, and counts valid objects.
-`Transaction.is_income()` returns whether the amount is positive. Assertions cover
-these two methods, including invalid amounts and the zero boundary.
+`Transaction.is_income()` returns whether the amount is positive. `formatted()`
+and `__str__()` display the date, description, signed amount to two decimal places,
+and category. For example: `2026-08-02 Groceries -450.50 FOOD`.
+Assertions cover construction, income checks, and display, including invalid
+amounts and the zero boundary.
 
-Options 1–8 explain which work is pending. Display methods, the subclass, parsing,
+Options 1–8 explain which work is pending. The subclass, parsing,
 analytics, reports, and menu connections will be built step by step. Calendar-date
 validation will be implemented with the parser.
 
@@ -29,7 +32,7 @@ python tests.py
 
 Use `python3` if that is the Python command on your computer. At this stage,
 `main.py` opens the menu and `tests.py` runs the current model assertions.
-A passing result covers only transaction construction and income checks;
+A passing result covers only transaction construction, income checks, and display;
 the remaining features and their tests are still to be implemented.
 
 ## Project structure

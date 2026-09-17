@@ -1,9 +1,9 @@
-"""Assertion tests for the two Transaction methods implemented so far."""
+"""Assertion tests for the Transaction methods implemented so far."""
 
 from models import Transaction
 
 # TODO: Test parsing, invalid rows, missing files, and date normalisation.
-# TODO: Test formatted display, inheritance, ledger, closure, duplicates, and outliers.
+# TODO: Test inheritance, ledger, closure, duplicates, and outliers.
 # TODO: Use helpful assertion messages and temporary files for file tests.
 
 if __name__ == "__main__":
@@ -29,6 +29,14 @@ if __name__ == "__main__":
     assert zero.is_income() is False, "Zero must not count as income"
     assert Transaction.total_transactions == starting_count + 3, "Count every valid object once"
 
+    assert income.formatted() == "2026-08-01 Salary +1500.00 INCOME", "Income display needs a plus sign and two decimal places"
+    assert expense.formatted() == "2026-08-02 Groceries -450.50 FOOD", "Expense display must preserve the minus sign and cents"
+    assert zero.formatted() == "2026-08-03 No movement +0.00 OTHER", "Zero must display with two decimal places"
+    assert str(income) == income.formatted(), "Printing a transaction must use its formatted display"
+    assert str(expense) == expense.formatted(), "Expense __str__ must match formatted()"
+    assert expense.amount == -450.5, "Formatting must not change the stored amount"
+    assert Transaction.total_transactions == starting_count + 3, "Formatting must not create extra transactions"
+
     for bad_amount in ("abc", "NaN", "inf", "-inf", "1e999", True, None):
         try:
             Transaction("2026-08-01", "Invalid amount", bad_amount, "FOOD")
@@ -48,4 +56,4 @@ if __name__ == "__main__":
             raise AssertionError("An empty transaction field was accepted")
 
     assert Transaction.total_transactions == starting_count + 3, "Invalid objects must not increase the count"
-    print("All tests passed (Transaction construction and income checks only).")
+    print("All tests passed (Transaction construction, income checks, and display).")

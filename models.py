@@ -37,7 +37,13 @@ class Transaction:
         """Positive amounts are income; negative amounts and zero are not."""
         return self.amount > 0
 
-    # TODO: Add formatted() and __str__().
+    def formatted(self):
+        """Show the date, description, signed amount, and category on one line."""
+        return f"{self.date} {self.description} {self.amount:+.2f} {self.category}"
+
+    def __str__(self):
+        """Use the same readable format when the transaction is printed."""
+        return self.formatted()
 
 
 # TODO: Add RecurringTransaction using super() and a method override.
