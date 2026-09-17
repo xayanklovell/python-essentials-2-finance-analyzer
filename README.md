@@ -59,8 +59,13 @@ samples may have no outliers. A common scale avoids overflow for large finite
 amounts; transactions remain unchanged. Changing the magnitude threshold does
 not change the statistical result. The sample salary is its sole outlier.
 
-Options 7 and 8 explain which work is pending. Reports, logging, and the remaining
-menu connections will be built next. Run tests directly with `python tests.py`.
+Option 8 runs `tests.py` using the same Python interpreter in a separate process.
+It shows assertion failures and prints an explicit PASS or FAIL based on the exit
+status. Loaded transactions and the session object counter are preserved. Tests
+also run before any statement is loaded. A test run times out after 60 seconds.
+
+Option 7 is still pending. Monthly reports, the environment stamp, and append-only
+logging will be built next. Tests also run directly with `python tests.py`.
 
 ## Statement format and cleaning
 
@@ -100,7 +105,7 @@ python tests.py
 Use `python3` if that is the Python command on your computer. At this stage,
 `main.py` opens the menu and `tests.py` runs the current assertions.
 A passing result covers transaction models, sample generation, defensive loading,
-running balances, threshold flagging, category totals, duplicates, and outliers;
+running balances, threshold flagging, category totals, duplicates, outliers, and the test runner;
 the remaining features and their tests are still to be implemented.
 
 ## Project structure

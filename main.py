@@ -1,11 +1,15 @@
 """Main menu for the Personal Finance Transaction Analyzer."""
 
 from pathlib import Path
+import subprocess
+import sys
 
 from analytics import category_totals, find_duplicates, find_outliers, make_flagger, running_balance
 from parser import STATEMENT_FILE, generate_sample_file, load_transactions
 
 
+PROJECT_DIR = Path(__file__).resolve().parent
+TESTS_FILE = PROJECT_DIR / "tests.py"
 MENU = """===== FINANCE TRANSACTION ANALYZER =====
 1. Generate a messy sample statement file
 2. Load & validate transactions (reject bad rows)
@@ -20,8 +24,27 @@ MENU = """===== FINANCE TRANSACTION ANALYZER =====
 # Replace these messages with function calls as each module is implemented.
 PENDING_MESSAGES = {
     7: "Not implemented yet: write the monthly summary in reporting.py.",
-    8: "Tests are available: run python tests.py. This menu connection is still pending.",
 }
+
+
+def run_self_tests():
+    """Run assertions in a separate process and report its exit status."""
+    try:
+        result = subprocess.run(
+            [sys.executable, str(TESTS_FILE)], cwd=PROJECT_DIR,
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            check=False, timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        print(f"Self-tests: FAIL (could not complete the test run: {error})")
+        return False
+    if result.stdout:
+        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+    if result.stderr:
+        print(result.stderr, end="" if result.stderr.endswith("\n") else "\n")
+    passed = result.returncode == 0
+    print("Self-tests: PASS" if passed else "Self-tests: FAIL")
+    return passed
 
 
 def main():
@@ -115,6 +138,8 @@ def main():
                 if not outliers:
                     print("No statistical outliers found.")
                 print("Statistics use signed amounts; the magnitude threshold is a separate rule.")
+            elif choice == 8:
+                run_self_tests()
             else:
                 print(PENDING_MESSAGES[choice])
         except (OSError, UnicodeError) as error:

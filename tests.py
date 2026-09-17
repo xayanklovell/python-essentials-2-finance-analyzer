@@ -1,12 +1,16 @@
 """Assertion tests for transaction models, parsing, and implemented analytics."""
 
 from collections import Counter
+from contextlib import redirect_stdout
 from decimal import getcontext
 import inspect
+import io
 from pathlib import Path
 import statistics
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
+import main
 from analytics import category_totals, find_duplicates, find_outliers, make_flagger, running_balance
 from models import RecurringTransaction, Transaction
 from parser import generate_sample_file, load_transactions, parse_row
@@ -355,4 +359,29 @@ if __name__ == "__main__":
         assert Transaction.total_transactions == before_outliers_count, "Outlier detection must not create transactions"
     assert find_outliers(loaded_sample) == [loaded_sample[0]], "The sample salary should be its sole statistical outlier"
 
-    print("All tests passed (transaction models, defensive parsing, and all analytics).")
+    # Tiny fixture scripts exercise the test runner without recursively running
+    # this entire test file. Each fixture runs in a separate Python process.
+    with TemporaryDirectory() as temporary:
+        fixture = Path(temporary) / "runner_fixture.py"
+        before_runner_count = Transaction.total_transactions
+        before_runner_amount = income.amount
+        for script, expected_pass, expected_output in (
+            ("print('Fixture assertions completed')\n", True, "Fixture assertions completed"),
+            ("raise AssertionError('Deliberate fixture failure')\n", False, "Deliberate fixture failure"),
+        ):
+            fixture.write_text(script, encoding="utf-8")
+            output = io.StringIO()
+            with patch.object(main, "TESTS_FILE", fixture), redirect_stdout(output):
+                passed = main.run_self_tests()
+            assert passed is expected_pass, "The runner must use the child process exit status"
+            assert expected_output in output.getvalue(), "Show the child process output, including assertion failures"
+            assert f"Self-tests: {'PASS' if expected_pass else 'FAIL'}" in output.getvalue(), "Print an explicit test status"
+        missing_test = Path(temporary) / "missing_tests.py"
+        output = io.StringIO()
+        with patch.object(main, "TESTS_FILE", missing_test), redirect_stdout(output):
+            assert main.run_self_tests() is False, "A missing test file must report failure"
+        assert "Self-tests: FAIL" in output.getvalue(), "Missing tests must never be reported as passing"
+        assert Transaction.total_transactions == before_runner_count, "Self-tests must not change session counters"
+        assert income.amount == before_runner_amount, "Self-tests must not change loaded transaction objects"
+
+    print("All tests passed (models, parsing, analytics, and the menu test runner).")
