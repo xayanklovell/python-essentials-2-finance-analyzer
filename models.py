@@ -46,4 +46,16 @@ class Transaction:
         return self.formatted()
 
 
-# TODO: Add RecurringTransaction using super() and a method override.
+class RecurringTransaction(Transaction):
+    """A transaction with a recurring interval, such as monthly rent."""
+
+    def __init__(self, date, description, amount, category, interval="monthly"):
+        # Check the extra field first, so an invalid interval is never counted.
+        if not isinstance(interval, str) or not interval.strip():
+            raise ValueError("interval must be nonempty text")
+        super().__init__(date, description, amount, category)
+        self.interval = interval.strip().lower()
+
+    def formatted(self):
+        """Extend the parent's display with the recurrence interval."""
+        return f"{super().formatted()} [recurs {self.interval}]"

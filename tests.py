@@ -1,9 +1,9 @@
-"""Assertion tests for the Transaction methods implemented so far."""
+"""Assertion tests for Transaction and RecurringTransaction."""
 
-from models import Transaction
+from models import RecurringTransaction, Transaction
 
 # TODO: Test parsing, invalid rows, missing files, and date normalisation.
-# TODO: Test inheritance, ledger, closure, duplicates, and outliers.
+# TODO: Test the ledger, closure, duplicates, and outliers.
 # TODO: Use helpful assertion messages and temporary files for file tests.
 
 if __name__ == "__main__":
@@ -56,4 +56,34 @@ if __name__ == "__main__":
             raise AssertionError("An empty transaction field was accepted")
 
     assert Transaction.total_transactions == starting_count + 3, "Invalid objects must not increase the count"
-    print("All tests passed (Transaction construction, income checks, and display).")
+
+    recurring = RecurringTransaction("2026-08-01", "Rent", -8000, "RENT")
+    weekly_income = RecurringTransaction("2026-08-02", "Tutoring", 250, "INCOME", " Weekly ")
+    assert isinstance(recurring, Transaction), "RecurringTransaction must inherit Transaction"
+    assert recurring.interval == "monthly", "The default interval must be monthly"
+    assert weekly_income.interval == "weekly", "Custom intervals must be stripped and lowercase"
+    assert recurring.amount == -8000.0, "The subclass must retain the parent's amount handling"
+    assert recurring.is_income() is False, "Recurring expenses must inherit the income check"
+    assert weekly_income.is_income() is True, "Recurring income must inherit the income check"
+    assert recurring.formatted() == "2026-08-01 Rent -8000.00 RENT [recurs monthly]", "The override must extend the parent's display"
+    assert str(weekly_income) == "2026-08-02 Tutoring +250.00 INCOME [recurs weekly]", "Inherited __str__ must use the subclass override"
+    assert Transaction.total_transactions == starting_count + 5, "Each valid subclass instance must increment the shared count once"
+    assert RecurringTransaction.total_transactions == Transaction.total_transactions, "Both classes must share one counter"
+
+    for bad_interval in ("", " ", None, 7):
+        try:
+            RecurringTransaction("2026-08-01", "Rent", -8000, "RENT", bad_interval)
+        except ValueError as error:
+            assert str(error), "Invalid intervals need a clear error message"
+        else:
+            raise AssertionError(f"Invalid interval {bad_interval!r} was accepted")
+
+    try:
+        RecurringTransaction("2026-08-01", "Rent", "abc", "RENT")
+    except ValueError as error:
+        assert str(error), "The subclass must preserve the parent's amount validation"
+    else:
+        raise AssertionError("The subclass accepted an invalid amount")
+
+    assert Transaction.total_transactions == starting_count + 5, "Invalid subclass instances must not increase the shared count"
+    print("All tests passed (transaction models, display, and inheritance).")

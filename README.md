@@ -15,7 +15,13 @@ and category. For example: `2026-08-02 Groceries -450.50 FOOD`.
 Assertions cover construction, income checks, and display, including invalid
 amounts and the zero boundary.
 
-Options 1–8 explain which work is pending. The subclass, parsing,
+`RecurringTransaction` inherits the transaction fields and income check. Its
+constructor uses `super()` and adds an interval (default: `monthly`). Its
+`formatted()` override appends the interval to the parent's display, for example
+`2026-08-01 Rent -8000.00 RENT [recurs monthly]`. Both classes share one creation
+counter. Tests cover inherited methods, custom intervals, and rejected objects.
+
+Options 1–8 explain which work is pending. Parsing,
 analytics, reports, and menu connections will be built step by step. Calendar-date
 validation will be implemented with the parser.
 
@@ -32,7 +38,7 @@ python tests.py
 
 Use `python3` if that is the Python command on your computer. At this stage,
 `main.py` opens the menu and `tests.py` runs the current model assertions.
-A passing result covers only transaction construction, income checks, and display;
+A passing result covers only transaction models, display, and inheritance;
 the remaining features and their tests are still to be implemented.
 
 ## Project structure
