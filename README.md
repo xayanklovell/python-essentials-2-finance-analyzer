@@ -36,13 +36,18 @@ duplicates. Amounts remain floats, while the running sum uses decimal arithmetic
 to avoid ordinary decimal rounding drift. Non-finite opening balances and totals
 outside the float range produce a clear error.
 
+Option 4 displays income, expenses, and net totals for every category. Income is
+positive and expenses are negative, based on the actual amount rather than the
+category name. Duplicates remain included, unknown categories are accepted, and
+zero-value categories remain visible. Category sums use decimal arithmetic too.
+
 Option 6 now demonstrates the configurable threshold closure. Enter a finite,
 nonnegative threshold (default 1000); transactions are flagged only when their
 amount magnitude is greater than it. Income and expenses can both be flagged;
 amounts equal to the threshold are excluded. Statistical outlier detection is
 still pending and is a separate rule from this magnitude check.
 
-Options 4, 5, 7, and 8 explain which work is pending. Category totals, duplicate
+Options 5, 7, and 8 explain which work is pending. Duplicate
 detection, statistical outliers, reports, and the remaining menu connections will
 be built step by step. Run tests directly with `python tests.py`.
 
@@ -84,7 +89,7 @@ python tests.py
 Use `python3` if that is the Python command on your computer. At this stage,
 `main.py` opens the menu and `tests.py` runs the current assertions.
 A passing result covers transaction models, sample generation, defensive loading,
-running balances, and threshold flagging;
+running balances, threshold flagging, and category totals;
 the remaining features and their tests are still to be implemented.
 
 ## Project structure

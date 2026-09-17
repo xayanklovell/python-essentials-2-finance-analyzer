@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from analytics import make_flagger, running_balance
+from analytics import category_totals, make_flagger, running_balance
 from parser import STATEMENT_FILE, generate_sample_file, load_transactions
 
 
@@ -19,7 +19,6 @@ MENU = """===== FINANCE TRANSACTION ANALYZER =====
 
 # Replace these messages with function calls as each module is implemented.
 PENDING_MESSAGES = {
-    4: "Not implemented yet: calculate category totals in analytics.py.",
     5: "Not implemented yet: detect duplicate transactions in analytics.py.",
     7: "Not implemented yet: write the monthly summary in reporting.py.",
     8: "Tests are available: run python tests.py. This menu connection is still pending.",
@@ -75,6 +74,18 @@ def main():
                 balances = running_balance(transactions, start)
                 for transaction, balance in zip(transactions, balances):
                     print(f"{transaction.formatted()} | balance {balance:+.2f}")
+            elif choice == 4:
+                if not transactions:
+                    print("No valid transactions loaded. Use option 2 first.")
+                    continue
+                totals = category_totals(transactions)
+                income = category_totals(item for item in transactions if item.is_income())
+                expenses = category_totals(item for item in transactions if item.amount < 0)
+                print(f"\n{'CATEGORY':<18} {'INCOME':>14} {'EXPENSES':>14} {'NET':>14}")
+                for category, net in sorted(totals.items()):
+                    print(f"{category:<18} {income.get(category, 0):>+14.2f} "
+                          f"{expenses.get(category, 0):>+14.2f} {net:>+14.2f}")
+                print("Income and expenses follow the actual amount signs. Duplicates are included.")
             elif choice == 6:
                 if not transactions:
                     print("No valid transactions loaded. Use option 2 first.")

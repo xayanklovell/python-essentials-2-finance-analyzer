@@ -45,6 +45,20 @@ def make_flagger(threshold):
     return flag
 
 
+def category_totals(transactions):
+    """Return each category's signed net amount, including every loaded row."""
+    totals = {}
+    with localcontext() as context:
+        context.prec = 1000
+        for transaction in transactions:
+            amount = Decimal(str(_finite_number(transaction.amount, "Transaction amount")))
+            category = transaction.category
+            totals[category] = totals.get(category, Decimal(0)) + amount
+    return {
+        category: _finite_number(total, f"Category total for {category}")
+        for category, total in totals.items()
+    }
+
+
 # TODO: find_duplicates(transactions) uses a set of transaction signatures.
 # TODO: find_outliers(transactions) uses statistics.mean and statistics.stdev.
-# TODO: category_totals(transactions) sums income and expenses by category.

@@ -6,7 +6,7 @@ import inspect
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from analytics import make_flagger, running_balance
+from analytics import category_totals, make_flagger, running_balance
 from models import RecurringTransaction, Transaction
 from parser import generate_sample_file, load_transactions, parse_row
 
@@ -264,4 +264,30 @@ if __name__ == "__main__":
         else:
             raise AssertionError(f"Invalid threshold accepted: {invalid_threshold!r}")
 
-    print("All tests passed (transaction models, parsing, running balances, and threshold flagging).")
+    category_items = [
+        Transaction("2026-08-01", "Salary", 1000, "INCOME"),
+        Transaction("2026-08-02", "Lunch", -20, "food"),
+        Transaction("2026-08-03", "Refund", 5, "FOOD"),
+        Transaction("2026-08-04", "Rent", -100, "RENT"),
+        Transaction("2026-08-05", "No movement", 0, "CUSTOM"),
+    ]
+    category_items.append(category_items[1])
+    expected_totals = {"INCOME": 1000.0, "FOOD": -35.0, "RENT": -100.0, "CUSTOM": 0.0}
+    assert category_totals(category_items) == expected_totals, "Sum signed amounts by tag and include duplicates"
+    assert category_totals(iter(category_items)) == expected_totals, "Category totals must accept one-pass iterators"
+    assert category_totals([]) == {}, "An empty statement has no category totals"
+    assert category_totals(pennies) == {"OTHER": 0.0}, "Category arithmetic must avoid decimal rounding residue"
+    assert category_totals([enormous, cent, reversal]) == {"OTHER": 0.01}, "Retain cents when large category amounts cancel"
+    assert all(isinstance(total, float) for total in category_totals(category_items).values()), "Return float category totals"
+    assert category_totals(item for item in category_items if item.is_income()) == {"INCOME": 1000.0, "FOOD": 5.0}, "Income columns follow amount signs, not category names"
+    assert category_totals(item for item in category_items if item.amount < 0) == {"FOOD": -40.0, "RENT": -100.0}, "Expense columns retain negative signs and duplicate amounts"
+    assert [item.amount for item in category_items] == [1000.0, -20.0, 5.0, -100.0, 0.0, -20.0], "Calculating categories must not mutate source transactions"
+    assert getcontext().prec == original_precision, "Category arithmetic must restore the caller's decimal context"
+    try:
+        category_totals([enormous, enormous])
+    except ValueError as error:
+        assert "Category total" in str(error), "Explain a category total outside the float range"
+    else:
+        raise AssertionError("An overflowing category total must not become infinity")
+
+    print("All tests passed (transaction models, parsing, ledger, flagger, and category totals).")
