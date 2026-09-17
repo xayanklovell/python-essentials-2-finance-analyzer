@@ -30,7 +30,13 @@ Option 2 loads the sample or a custom statement path. The sample produces
 physical line number and reason. Missing and empty files produce file diagnostics
 instead of crashing; these do not count as rejected rows.
 
-Options 3–8 explain which work is pending. Analytics, reports, and their menu
+Option 3 shows the running balance after every loaded transaction, using an
+optional opening balance (default zero). It preserves statement order and includes
+duplicates. Amounts remain floats, while the running sum uses decimal arithmetic
+to avoid ordinary decimal rounding drift. Non-finite opening balances and totals
+outside the float range produce a clear error.
+
+Options 4–8 explain which work is pending. Other analytics, reports, and their menu
 connections will be built step by step. Run tests directly with `python tests.py`.
 
 ## Statement format and cleaning
@@ -70,7 +76,8 @@ python tests.py
 
 Use `python3` if that is the Python command on your computer. At this stage,
 `main.py` opens the menu and `tests.py` runs the current assertions.
-A passing result covers transaction models, sample generation, and defensive loading;
+A passing result covers transaction models, sample generation, defensive loading,
+and running balances;
 the remaining features and their tests are still to be implemented.
 
 ## Project structure

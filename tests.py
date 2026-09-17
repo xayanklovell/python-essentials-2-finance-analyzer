@@ -1,13 +1,16 @@
-"""Assertion tests for transaction models, sample generation, and defensive loading."""
+"""Assertion tests for transaction models, parsing, and implemented analytics."""
 
 from collections import Counter
+from decimal import getcontext
+import inspect
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from analytics import running_balance
 from models import RecurringTransaction, Transaction
 from parser import generate_sample_file, load_transactions, parse_row
 
-# TODO: Test the ledger, closure, duplicates, and outliers.
+# TODO: Test the closure, duplicates, and outliers.
 # TODO: Test reports when reporting.py is implemented.
 
 if __name__ == "__main__":
@@ -196,4 +199,44 @@ if __name__ == "__main__":
             assert not valid and len(reasons) == 1, "Missing paths and directories must not crash"
             assert reasons[0].startswith("file: "), "Path errors must identify the file"
 
-    print("All tests passed (transaction models, sample generation, and defensive loading).")
+    ledger_items = [
+        Transaction("2026-08-03", "Income", 100, "INCOME"),
+        Transaction("2026-08-01", "Expense", -25, "FOOD"),
+        Transaction("2026-08-02", "Refund", 10, "REFUND"),
+    ]
+    balances = running_balance(ledger_items)
+    assert inspect.isgenerator(balances), "The ledger must be a generator"
+    original_precision = getcontext().prec
+    assert next(balances) == 100.0, "Yield the first balance without consuming the whole ledger"
+    assert getcontext().prec == original_precision, "Yielding must not change the caller's decimal context"
+    assert list(balances) == [75.0, 85.0], "Keep running state and statement order, not date order"
+    assert list(running_balance(ledger_items, start=20)) == [120.0, 95.0, 105.0], "Include the opening balance"
+    assert list(running_balance(ledger_items, start=-120)) == [-20.0, -45.0, -35.0], "Allow a negative opening balance"
+    assert list(running_balance(iter(ledger_items))) == [100.0, 75.0, 85.0], "Support one-pass transaction iterators"
+    assert list(running_balance([], start=20)) == [], "An empty ledger yields no balances"
+    assert list(running_balance([ledger_items[1], ledger_items[1]])) == [-25.0, -50.0], "Duplicate transactions remain included"
+    assert [item.amount for item in ledger_items] == [100.0, -25.0, 10.0], "The ledger must not change stored amounts"
+    pennies = [Transaction("2026-08-01", "Decimal check", amount, "OTHER") for amount in (0.1, 0.2, -0.3)]
+    assert list(running_balance(pennies)) == [0.1, 0.3, 0.0], "Decimal amounts must cancel without rounding residue"
+    assert all(isinstance(value, float) for value in running_balance(pennies)), "Yield float balances"
+
+    for invalid_start in (float("nan"), float("inf"), -float("inf"), True, "abc"):
+        try:
+            list(running_balance([], start=invalid_start))
+        except ValueError as error:
+            assert str(error), "Invalid opening balances need an explanation"
+        else:
+            raise AssertionError(f"Invalid opening balance accepted: {invalid_start!r}")
+
+    enormous = Transaction("2026-08-01", "Extreme amount", 1e308, "OTHER")
+    cent = Transaction("2026-08-01", "One cent", 0.01, "OTHER")
+    reversal = Transaction("2026-08-01", "Extreme reversal", -1e308, "OTHER")
+    assert list(running_balance([enormous, cent, reversal]))[-1] == 0.01, "Retain small amounts when large values later cancel"
+    try:
+        list(running_balance([enormous, enormous]))
+    except ValueError as error:
+        assert "Calculated balance" in str(error), "Explain a balance outside the float range"
+    else:
+        raise AssertionError("An overflowing balance must not silently become infinity")
+
+    print("All tests passed (transaction models, parsing, and running balances).")

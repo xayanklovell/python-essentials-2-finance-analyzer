@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from analytics import running_balance
 from parser import STATEMENT_FILE, generate_sample_file, load_transactions
 
 
@@ -18,7 +19,6 @@ MENU = """===== FINANCE TRANSACTION ANALYZER =====
 
 # Replace these messages with function calls as each module is implemented.
 PENDING_MESSAGES = {
-    3: "Not implemented yet: build the running-balance generator in analytics.py.",
     4: "Not implemented yet: calculate category totals in analytics.py.",
     5: "Not implemented yet: detect duplicate transactions in analytics.py.",
     6: "Not implemented yet: flag unusual transactions in analytics.py.",
@@ -66,12 +66,22 @@ def main():
                 for reason in rejections:
                     print(f"  {reason}")
                 print("Duplicates and sign/category mismatches are kept for later analysis.")
+            elif choice == 3:
+                if not transactions:
+                    print("No valid transactions loaded. Use option 2 first.")
+                    continue
+                answer = input("Opening balance [Enter for 0]: ").strip()
+                start = float(answer) if answer else 0.0
+                print("\nLedger in statement order (duplicates included):")
+                balances = running_balance(transactions, start)
+                for transaction, balance in zip(transactions, balances):
+                    print(f"{transaction.formatted()} | balance {balance:+.2f}")
             else:
                 print(PENDING_MESSAGES[choice])
         except (OSError, UnicodeError) as error:
             print(f"Could not complete the file operation: {error}")
-        except (ValueError, RuntimeError) as error:
-            print(f"Could not use that statement path: {error}")
+        except (ValueError, RuntimeError, OverflowError) as error:
+            print(f"Could not complete this option: {error}")
         except (EOFError, KeyboardInterrupt):
             print("\nGoodbye!")
             break
