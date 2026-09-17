@@ -1,6 +1,11 @@
-"""Assertion tests for Transaction and RecurringTransaction."""
+"""Assertion tests for transaction models and sample-statement generation."""
+
+from collections import Counter
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from models import RecurringTransaction, Transaction
+from parser import generate_sample_file
 
 # TODO: Test parsing, invalid rows, missing files, and date normalisation.
 # TODO: Test the ledger, closure, duplicates, and outliers.
@@ -86,4 +91,24 @@ if __name__ == "__main__":
         raise AssertionError("The subclass accepted an invalid amount")
 
     assert Transaction.total_transactions == starting_count + 5, "Invalid subclass instances must not increase the shared count"
-    print("All tests passed (transaction models, display, and inheritance).")
+
+    with TemporaryDirectory() as temporary:
+        sample_path = Path(temporary) / "nested" / "statement.txt"
+        result = generate_sample_file(sample_path)
+        assert result == sample_path and sample_path.is_file(), "Generate the sample in the requested directory"
+        sample = sample_path.read_text(encoding="utf-8")
+        lines = sample.splitlines()
+        assert len(lines) >= 12, "The sample must contain at least 12 rows"
+        assert any(count > 1 for line, count in Counter(lines).items() if line), "The sample must plant an exact duplicate"
+        assert "hello world" in lines, "The sample must include a junk line"
+        assert any("/" in line.split(",")[0] for line in lines), "The sample must include a slash-separated date"
+        assert any(len(line.split(",")) == 3 for line in lines), "The sample must include missing fields"
+        assert any(",abc," in line for line in lines), "The sample must include a nonnumeric amount"
+        assert any(field != field.strip() for line in lines for field in line.split(",")), "The sample must include surrounding whitespace"
+        assert any(",200,FOOD" in line for line in lines), "Plant a positive expense-category amount"
+        assert any(",-300,SALARY" in line for line in lines), "Plant a negative income-category amount"
+        sample_path.write_text("Old sample to replace", encoding="utf-8")
+        generate_sample_file(sample_path)
+        assert sample_path.read_text(encoding="utf-8") == sample, "Regeneration must replace the old sample rather than append"
+
+    print("All tests passed (transaction models and sample generation).")

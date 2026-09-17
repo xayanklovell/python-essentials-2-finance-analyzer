@@ -1,5 +1,7 @@
 """Main menu for the Personal Finance Transaction Analyzer."""
 
+from parser import generate_sample_file
+
 
 MENU = """===== FINANCE TRANSACTION ANALYZER =====
 1. Generate a messy sample statement file
@@ -14,14 +16,13 @@ MENU = """===== FINANCE TRANSACTION ANALYZER =====
 
 # Replace these messages with function calls as each module is implemented.
 PENDING_MESSAGES = {
-    1: "Not implemented yet: generate the messy sample file in parser.py.",
     2: "Not implemented yet: load and validate transactions in parser.py.",
     3: "Not implemented yet: build the running-balance generator in analytics.py.",
     4: "Not implemented yet: calculate category totals in analytics.py.",
     5: "Not implemented yet: detect duplicate transactions in analytics.py.",
     6: "Not implemented yet: flag unusual transactions in analytics.py.",
     7: "Not implemented yet: write the monthly summary in reporting.py.",
-    8: "Model tests are available: run python tests.py. This menu connection is still pending.",
+    8: "Tests are available: run python tests.py. This menu connection is still pending.",
 }
 
 
@@ -46,7 +47,15 @@ def main():
             print("Goodbye!")
             break
 
-        print(PENDING_MESSAGES[choice])
+        if choice == 1:
+            try:
+                path = generate_sample_file()
+                print(f"Generated fictional sample statement: {path}")
+                print("This replaces the previous sample statement.")
+            except (OSError, UnicodeError) as error:
+                print(f"Could not write the sample statement: {error}")
+        else:
+            print(PENDING_MESSAGES[choice])
 
 
 if __name__ == "__main__":

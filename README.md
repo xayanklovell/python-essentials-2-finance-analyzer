@@ -21,8 +21,12 @@ constructor uses `super()` and adds an interval (default: `monthly`). Its
 `2026-08-01 Rent -8000.00 RENT [recurs monthly]`. Both classes share one creation
 counter. Tests cover inherited methods, custom intervals, and rejected objects.
 
-Options 1–8 explain which work is pending. Parsing,
-analytics, reports, and menu connections will be built step by step. Calendar-date
+Option 1 now creates `data/statement.txt` with 24 fictional rows, including
+duplicates, missing fields, junk, invalid amounts, wrong signs, and whitespace.
+It replaces the previous sample. Generated paths are relative to the project.
+
+Options 2–8 explain which work is pending. Parsing,
+analytics, reports, and other menu connections will be built step by step. Calendar-date
 validation will be implemented with the parser.
 
 ## Run locally
@@ -37,8 +41,8 @@ python tests.py
 ```
 
 Use `python3` if that is the Python command on your computer. At this stage,
-`main.py` opens the menu and `tests.py` runs the current model assertions.
-A passing result covers only transaction models, display, and inheritance;
+`main.py` opens the menu and `tests.py` runs the current assertions.
+A passing result covers transaction models and sample generation;
 the remaining features and their tests are still to be implemented.
 
 ## Project structure
