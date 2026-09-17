@@ -36,8 +36,15 @@ duplicates. Amounts remain floats, while the running sum uses decimal arithmetic
 to avoid ordinary decimal rounding drift. Non-finite opening balances and totals
 outside the float range produce a clear error.
 
-Options 4–8 explain which work is pending. Other analytics, reports, and their menu
-connections will be built step by step. Run tests directly with `python tests.py`.
+Option 6 now demonstrates the configurable threshold closure. Enter a finite,
+nonnegative threshold (default 1000); transactions are flagged only when their
+amount magnitude is greater than it. Income and expenses can both be flagged;
+amounts equal to the threshold are excluded. Statistical outlier detection is
+still pending and is a separate rule from this magnitude check.
+
+Options 4, 5, 7, and 8 explain which work is pending. Category totals, duplicate
+detection, statistical outliers, reports, and the remaining menu connections will
+be built step by step. Run tests directly with `python tests.py`.
 
 ## Statement format and cleaning
 
@@ -77,7 +84,7 @@ python tests.py
 Use `python3` if that is the Python command on your computer. At this stage,
 `main.py` opens the menu and `tests.py` runs the current assertions.
 A passing result covers transaction models, sample generation, defensive loading,
-and running balances;
+running balances, and threshold flagging;
 the remaining features and their tests are still to be implemented.
 
 ## Project structure

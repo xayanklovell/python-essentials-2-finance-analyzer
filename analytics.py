@@ -31,7 +31,20 @@ def running_balance(transactions, start=0.0):
         yield _finite_number(balance, "Calculated balance")
 
 
-# TODO: make_flagger(threshold) returns a closure comparing amount magnitude.
+def make_flagger(threshold):
+    """Return a function that remembers a nonnegative magnitude threshold."""
+    limit = _finite_number(threshold, "Threshold")
+    if limit < 0:
+        raise ValueError("Threshold must be zero or greater")
+
+    def flag(transaction):
+        # Absolute value lets large expenses and large income trigger the rule.
+        amount = _finite_number(transaction.amount, "Transaction amount")
+        return abs(amount) > limit
+
+    return flag
+
+
 # TODO: find_duplicates(transactions) uses a set of transaction signatures.
 # TODO: find_outliers(transactions) uses statistics.mean and statistics.stdev.
 # TODO: category_totals(transactions) sums income and expenses by category.

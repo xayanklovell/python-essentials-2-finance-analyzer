@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from analytics import running_balance
+from analytics import make_flagger, running_balance
 from parser import STATEMENT_FILE, generate_sample_file, load_transactions
 
 
@@ -21,7 +21,6 @@ MENU = """===== FINANCE TRANSACTION ANALYZER =====
 PENDING_MESSAGES = {
     4: "Not implemented yet: calculate category totals in analytics.py.",
     5: "Not implemented yet: detect duplicate transactions in analytics.py.",
-    6: "Not implemented yet: flag unusual transactions in analytics.py.",
     7: "Not implemented yet: write the monthly summary in reporting.py.",
     8: "Tests are available: run python tests.py. This menu connection is still pending.",
 }
@@ -76,6 +75,19 @@ def main():
                 balances = running_balance(transactions, start)
                 for transaction, balance in zip(transactions, balances):
                     print(f"{transaction.formatted()} | balance {balance:+.2f}")
+            elif choice == 6:
+                if not transactions:
+                    print("No valid transactions loaded. Use option 2 first.")
+                    continue
+                answer = input("Magnitude threshold [Enter for 1000]: ").strip()
+                flag = make_flagger(answer if answer else 1000)
+                flagged = [transaction for transaction in transactions if flag(transaction)]
+                print(f"\nTransactions exceeding the magnitude threshold: {len(flagged)}")
+                for transaction in flagged:
+                    print(f"  {transaction.formatted()}")
+                if not flagged:
+                    print("No transactions exceed this threshold.")
+                print("Statistical outlier detection is still pending.")
             else:
                 print(PENDING_MESSAGES[choice])
         except (OSError, UnicodeError) as error:

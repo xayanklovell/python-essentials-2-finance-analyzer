@@ -6,11 +6,11 @@ import inspect
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from analytics import running_balance
+from analytics import make_flagger, running_balance
 from models import RecurringTransaction, Transaction
 from parser import generate_sample_file, load_transactions, parse_row
 
-# TODO: Test the closure, duplicates, and outliers.
+# TODO: Test duplicates and outliers.
 # TODO: Test reports when reporting.py is implemented.
 
 if __name__ == "__main__":
@@ -239,4 +239,29 @@ if __name__ == "__main__":
     else:
         raise AssertionError("An overflowing balance must not silently become infinity")
 
-    print("All tests passed (transaction models, parsing, and running balances).")
+    flag = make_flagger(1000)
+    large_income = Transaction("2026-08-01", "Large income", 5000, "INCOME")
+    large_expense = Transaction("2026-08-01", "Large expense", -5000, "FOOD")
+    small = Transaction("2026-08-01", "Small amount", 50, "OTHER")
+    assert flag(large_income) is True, "A 5000 income must exceed a 1000 threshold"
+    assert flag(large_expense) is True, "A -5000 expense must also exceed the threshold"
+    assert flag(small) is False, "A 50 amount must not exceed a 1000 threshold"
+    for boundary in (1000, -1000):
+        boundary_item = Transaction("2026-08-01", "Boundary", boundary, "OTHER")
+        assert flag(boundary_item) is False, "Equality must not trigger a strict threshold"
+    lower_flag = make_flagger(10)
+    assert lower_flag(small) is True and flag(small) is False, "Each closure must remember its own threshold"
+    assert make_flagger(0)(zero) is False, "Zero must not exceed a zero threshold"
+    assert make_flagger(0)(large_expense) is True, "A zero threshold must flag nonzero expenses"
+    assert make_flagger("1000")(large_income) is True, "Accept numeric input from the menu"
+    assert large_expense.amount == -5000.0, "Flagging must not change an expense's sign"
+
+    for invalid_threshold in (-1, float("nan"), float("inf"), -float("inf"), True, None, "abc"):
+        try:
+            make_flagger(invalid_threshold)
+        except ValueError as error:
+            assert "Threshold" in str(error), "An invalid threshold needs a clear explanation"
+        else:
+            raise AssertionError(f"Invalid threshold accepted: {invalid_threshold!r}")
+
+    print("All tests passed (transaction models, parsing, running balances, and threshold flagging).")
