@@ -60,5 +60,21 @@ def category_totals(transactions):
     }
 
 
-# TODO: find_duplicates(transactions) uses a set of transaction signatures.
+def find_duplicates(transactions):
+    """Return every extra occurrence of the same four transaction fields."""
+    seen = set()
+    duplicates = []
+    for transaction in transactions:
+        # Use the actual fields: formatted amounts round away small differences.
+        signature = (
+            transaction.date, transaction.description,
+            transaction.amount, transaction.category,
+        )
+        if signature in seen:
+            duplicates.append(transaction)
+        else:
+            seen.add(signature)
+    return duplicates
+
+
 # TODO: find_outliers(transactions) uses statistics.mean and statistics.stdev.

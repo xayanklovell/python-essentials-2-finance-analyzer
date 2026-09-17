@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from analytics import category_totals, make_flagger, running_balance
+from analytics import category_totals, find_duplicates, make_flagger, running_balance
 from parser import STATEMENT_FILE, generate_sample_file, load_transactions
 
 
@@ -19,7 +19,6 @@ MENU = """===== FINANCE TRANSACTION ANALYZER =====
 
 # Replace these messages with function calls as each module is implemented.
 PENDING_MESSAGES = {
-    5: "Not implemented yet: detect duplicate transactions in analytics.py.",
     7: "Not implemented yet: write the monthly summary in reporting.py.",
     8: "Tests are available: run python tests.py. This menu connection is still pending.",
 }
@@ -86,6 +85,17 @@ def main():
                     print(f"{category:<18} {income.get(category, 0):>+14.2f} "
                           f"{expenses.get(category, 0):>+14.2f} {net:>+14.2f}")
                 print("Income and expenses follow the actual amount signs. Duplicates are included.")
+            elif choice == 5:
+                if not transactions:
+                    print("No valid transactions loaded. Use option 2 first.")
+                    continue
+                duplicates = find_duplicates(transactions)
+                print(f"\nDuplicate occurrences after the first: {len(duplicates)}")
+                for transaction in duplicates:
+                    print(f"  {transaction.formatted()}")
+                if not duplicates:
+                    print("No duplicate transactions found.")
+                print("All loaded transactions remain included in the ledger and totals.")
             elif choice == 6:
                 if not transactions:
                     print("No valid transactions loaded. Use option 2 first.")

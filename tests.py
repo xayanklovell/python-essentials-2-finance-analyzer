@@ -6,11 +6,11 @@ import inspect
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from analytics import category_totals, make_flagger, running_balance
+from analytics import category_totals, find_duplicates, make_flagger, running_balance
 from models import RecurringTransaction, Transaction
 from parser import generate_sample_file, load_transactions, parse_row
 
-# TODO: Test duplicates and outliers.
+# TODO: Test statistical outliers.
 # TODO: Test reports when reporting.py is implemented.
 
 if __name__ == "__main__":
@@ -290,4 +290,36 @@ if __name__ == "__main__":
     else:
         raise AssertionError("An overflowing category total must not become infinity")
 
-    print("All tests passed (transaction models, parsing, ledger, flagger, and category totals).")
+    first_coffee = Transaction("2026-08-08", "Coffee", -45, "FOOD")
+    first_tea = Transaction("2026-08-08", "Tea", -25, "FOOD")
+    second_coffee = parse_row("2026/08/08, Coffee , -45.00 , food ")
+    third_coffee = RecurringTransaction("2026-08-08", "Coffee", -45, "FOOD", "weekly")
+    second_tea = Transaction("2026-08-08", "Tea", -25, "FOOD")
+    duplicate_items = [first_coffee, first_tea, second_coffee, third_coffee, second_tea]
+    before_detection_count = Transaction.total_transactions
+    before_detection_fields = [(item.date, item.description, item.amount, item.category) for item in duplicate_items]
+    duplicates = find_duplicates(duplicate_items)
+    assert duplicates == [second_coffee, third_coffee, second_tea], "Return each extra occurrence in statement order"
+    assert duplicates[0] is second_coffee and duplicates[1] is third_coffee, "Return the original repeated objects"
+    assert find_duplicates(iter(duplicate_items)) == duplicates, "Duplicate detection must support one-pass iterators"
+    assert find_duplicates([first_coffee, first_coffee, first_coffee]) == [first_coffee, first_coffee], "Three identical entries have two extra occurrences"
+    assert find_duplicates([]) == [], "An empty input has no duplicates"
+    assert find_duplicates([first_coffee]) == [], "One entry is not a duplicate"
+    assert Transaction.total_transactions == before_detection_count, "Detecting duplicates must not create objects"
+    assert [(item.date, item.description, item.amount, item.category) for item in duplicate_items] == before_detection_fields, "Detection must preserve original rows and order"
+    assert category_totals(duplicate_items) == {"FOOD": -185.0}, "Duplicate detection must leave all amounts in the totals"
+
+    different_fields = [
+        first_coffee,
+        Transaction("2026-08-09", "Coffee", -45, "FOOD"),
+        Transaction("2026-08-08", "coffee", -45, "FOOD"),
+        Transaction("2026-08-08", "Coffee", -44.99, "FOOD"),
+        Transaction("2026-08-08", "Coffee", -45, "OTHER"),
+    ]
+    assert find_duplicates(different_fields) == [], "Each of the four fields must match for an exact duplicate"
+    close_amounts = [Transaction("2026-08-08", "Coffee", amount, "FOOD") for amount in (-10.001, -10.004)]
+    assert close_amounts[0].formatted() == close_amounts[1].formatted(), "The precision test needs amounts with the same display"
+    assert find_duplicates(close_amounts) == [], "Compare actual amounts rather than rounded display strings"
+    assert len(find_duplicates(loaded_sample)) == 1, "Detect the one extra occurrence planted in the sample"
+
+    print("All tests passed (models, parsing, ledger, flagger, categories, and duplicates).")

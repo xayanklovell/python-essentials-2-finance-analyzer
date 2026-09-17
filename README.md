@@ -41,14 +41,20 @@ positive and expenses are negative, based on the actual amount rather than the
 category name. Duplicates remain included, unknown categories are accepted, and
 zero-value categories remain visible. Category sums use decimal arithmetic too.
 
+Option 5 identifies duplicate occurrences after the first matching transaction.
+The signature contains the four cleaned fields: date, description, actual amount,
+and category. Three matching records produce two duplicates. Detection preserves
+every transaction in the original order; duplicates remain included in totals.
+The sample contains one extra occurrence of the coffee transaction.
+
 Option 6 now demonstrates the configurable threshold closure. Enter a finite,
 nonnegative threshold (default 1000); transactions are flagged only when their
 amount magnitude is greater than it. Income and expenses can both be flagged;
 amounts equal to the threshold are excluded. Statistical outlier detection is
 still pending and is a separate rule from this magnitude check.
 
-Options 5, 7, and 8 explain which work is pending. Duplicate
-detection, statistical outliers, reports, and the remaining menu connections will
+Options 7 and 8 explain which work is pending. Statistical outliers,
+reports, and the remaining menu connections will
 be built step by step. Run tests directly with `python tests.py`.
 
 ## Statement format and cleaning
@@ -89,7 +95,7 @@ python tests.py
 Use `python3` if that is the Python command on your computer. At this stage,
 `main.py` opens the menu and `tests.py` runs the current assertions.
 A passing result covers transaction models, sample generation, defensive loading,
-running balances, threshold flagging, and category totals;
+running balances, threshold flagging, category totals, and duplicate detection;
 the remaining features and their tests are still to be implemented.
 
 ## Project structure
